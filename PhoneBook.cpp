@@ -2,38 +2,52 @@
 #include <Windows.h>
 #include <string.h>
 #include <stdlib.h>
+#include <locale.h>
 
 #define MAXPEOPLE 100 // Максимальное число контактов
 #define MAXLEN   50  // Максимальная длина строки
-
-void initializationList(struct СPeople* StructOfData);
-int  menuSelect();
-void inputArrayOfStructs(struct СPeople* StructOfData, const char* title);
-int  inputAmountOfStructs();
-int  findFreeStruct(struct СPeople* StructOfData);
-int  menuEditing();
-int  inputItemNumber(struct СPeople* StructOfData, const char* title);
-int	 isEmptyList(struct СPeople* StructOfData);
-void deleteStruct(struct СPeople* StructOfData, const char* title);
-void editing(struct СPeople* StructOfData, const char* title);
-int  menuFields();
-void outputList(struct СPeople* StructOfData, const char* title);
-void sorting(struct СPeople* StructOfData);
 
 struct СPeople {
 	char name[MAXLEN];			  // Имя
 	char surname[MAXLEN];		  // Фамилия
 	char number[MAXLEN];		  // Номер телефона
 	char dateBirth[MAXLEN];		  // Дата рождения	
-	bool isDeleted;
-	struct СPeople* next;
+	struct СPeople* next = nullptr;
 };
 
 struct SingleLinkedList {
-	struct СPeople* root;
+	struct СPeople* root = nullptr;
 };
 
+int  menuSelect();
+int  inputAmountOfStructs();
+void inputListOfStructs();
+int  menuEditing();
+void deleteStruct();
+bool Equals(СPeople contact, char* name, char* surname);
+void editing();
+int  menuFields();
+void outputList();
+void sorting();
+void clearInputBuf();
+void outputStruct(struct СPeople* StructOfData);
+void freeList();
+void merge_sort(int i, int j, struct СPeople* a, struct СPeople* aux, int choice);
+bool lessStructures(СPeople first, СPeople second, int choice);
+bool less(char* first, char* second);
+bool more(char* first, char* second);
+void outputInFile();
+void input();
+int menuInput();
+void fileInput();
+int menuFile();
+
+void AddToEnd(struct СPeople* StructOfData);
+void AddToBegin(struct СPeople* StructOfData);
+int Count();
+
 struct SingleLinkedList contacts;
+const char* title = "№ Имя		Фамилия		 Номер телефона		  Дата рождения";
 
 /*Написать программу, реализующую односвязный список с функциями добавления, удаления и перестановкой
 Функции добавления элемента, удаления (по имени-фамилии), сортировки (по любому полю)*/
@@ -43,137 +57,228 @@ int main()
 {
 	SetConsoleCP(1251);			// Ввод с консоли в кодировке 1251
 	SetConsoleOutputCP(1251);	// Установка кодовой страницы win-cp 1251 в поток вывода
+	//setlocale(LC_ALL, "Russian");
 
-	const char* title = "№ Имя   Фамилия   Номер телефона   Дата рождения";
-	struct СPeople people[MAXPEOPLE];
-	initializationList(people);  //Инициализация списка (массива структур)
-
-	int isMainMenuActive = 1;
+	bool isMainMenuActive = true;
 	while (isMainMenuActive)
 	{
 		int userInput = menuSelect();
 		switch (userInput)
 		{
-		case 1: inputArrayOfStructs(people, title); break;
+		case 1: input(); break;
 		case 2:
 		{
-			int isMenuEditing = 1;
+			bool isMenuEditing = true;
 			while (isMenuEditing)
 			{
 				int choice = menuEditing();
 				switch (choice)
 				{
-				case 1: deleteStruct(people, title); break;
-				case 2: editing(people, title);		break;
-				case 3: sorting(people);			break;
-				case 4: isMenuEditing = 0;			break;
+				case 1: deleteStruct();				break;
+				case 2: editing();					break;
+				case 3: sorting();					break;
+				case 4: isMenuEditing = false;		break;
 				}
 			}
 		} break;
-		case 3: outputList(people, title); break;
-		case 4: isMainMenuActive = 0;	  break;
+		case 3: outputList();				  break;
+		case 4: outputInFile();				  break;
+		case 5: isMainMenuActive = false;	  break;
 		}
 	}
 }
 
-void initializationList(struct СPeople* StructOfData)
+void AddToEnd(struct СPeople* StructOfData)
 {
-	for (register int i = 0; i < MAXPEOPLE; i++)
-		StructOfData[i].isDeleted = true;
-}
-
-void addToBegin(struct СPeople* StructOfData)
-{
-	if (root != null)
+	if (contacts.root != nullptr)
 	{
-		var curPointer = root;
-		while (curPointer.next != null)
+		СPeople* curPointer = contacts.root;
+		while (curPointer->next != nullptr)
 		{
-			curPointer = curPointer.next;
+			curPointer = curPointer->next;
 		}
-		curPointer.next = node;
+		curPointer->next = StructOfData;
 	}
 	else
-		root = node;
+		contacts.root = StructOfData;
+}
+
+void AddToBegin(struct СPeople* StructOfData)
+{
+	СPeople* curPointer = contacts.root;
+	contacts.root = StructOfData;
+	contacts.root->next = curPointer;
+}
+
+int Count()
+{
+	СPeople* curPointer = contacts.root;
+	int count = 0;
+	while (curPointer != nullptr)
+	{
+		count++;
+		curPointer = curPointer->next;
+	}
+	return count;
 }
 
 int menuSelect()
 {
-	int choice;
 	system("cls");	// Очистка экрана 
 	puts("Меню");
 	puts("1 - Ввод");
-	puts("2 - Изменение");
-	puts("3 - Вывод");
-	puts("4 - Выход");
+	puts("2 - Редактирование");
+	puts("3 - Вывод на консоль");
+	puts("4 - Вывод в файл");
+	puts("5 - Выход");
+
+	unsigned int choice;
 	do
 	{
-		puts("Введите номер нужного пункта: ");
+		printf("Введите номер нужного пункта: ");
 		scanf_s("%i", &choice);
 		while (getchar() != '\n');
-	} while ((choice < 1) || (choice > 5));
+	} while ((choice < 1) || (choice > 6));
+
 	return choice;
+}
+
+int menuInput()
+{
+	system("cls");	// Очистка экрана 
+	puts("Меню ввода");
+	puts("1 - Загрузка из файла");
+	puts("2 - Ввод с консоли");
+
+	int choice;
+	do
+	{
+		printf("Введите номер нужного пункта: ");
+		scanf_s("%i", &choice);
+		while (getchar() != '\n');
+	} while ((choice < 1) || (choice > 2));
+
+	return choice;
+}
+
+int menuFile()
+{	
+	puts("Меню загрузки из файла");
+	puts("1 - Добавить к существующим записям");
+	puts("2 - Заменить");
+
+	int choice;
+	do
+	{
+		printf("Введите номер нужного пункта: ");
+		scanf_s("%i", &choice);
+		while (getchar() != '\n');
+	} while ((choice < 1) || (choice > 2));
+
+	return choice;
+}
+
+void input()
+{
+	int choice = menuInput();
+	if (choice == 1)
+		fileInput();
+	else
+		inputListOfStructs();
+}
+
+void fileInput()
+{
+	if (menuFile() == 2)
+		freeList();
+
+	char nameFile[50];
+	printf("Введите название файла: ");
+	scanf_s("%s", nameFile, sizeof(nameFile));
+
+	FILE* fileOnlyRead;
+	errno_t err = fopen_s(&fileOnlyRead, nameFile, "rb");
+	if (err == 0)
+		printf("Файл %s открылся\n", nameFile);
+	else
+	{
+		printf("Файл %s не открылся\n", nameFile);
+		exit(0);
+	}
+
+	int size = 0;
+	fscanf_s(fileOnlyRead, "%d", &size);
+
+	for (int i = 0; i < size; i++)
+	{
+		struct СPeople* contact = (СPeople*)calloc(1, sizeof(СPeople));
+
+		fscanf_s(fileOnlyRead, "%s", contact->name, MAXLEN);
+		fscanf_s(fileOnlyRead, "%s", contact->surname, MAXLEN);
+		fscanf_s(fileOnlyRead, "%s", contact->number, MAXLEN);
+		fscanf_s(fileOnlyRead, "%s", contact->dateBirth, MAXLEN);
+
+		AddToBegin(contact);
+	}
+	fclose(fileOnlyRead);
+
+	outputList();
+	clearInputBuf();
 }
 
 int inputAmountOfStructs()
 {
-	int amountPeople, mistakeProofing;
+	unsigned int amountPeople, mistakeProofing;
 	do
 	{
-		puts("Введите количество контактов: ");
+		printf("Введите количество контактов: ");
 		mistakeProofing = scanf_s("%d", &amountPeople);
 	} while (amountPeople < 1 || mistakeProofing < 1);
 
 	return amountPeople;
 }
 
-void inputArrayOfStructs(struct СPeople* StructOfData, const char* title)
+void inputListOfStructs()
 {
 	int amountOfStructs = inputAmountOfStructs();
 
 	puts(title);
 	printf("Введите список из %d контактов: \n", amountOfStructs);
+	clearInputBuf();
 
 	for (int i = 0; i < amountOfStructs; i++)
 	{
-		int slot;
-		slot = findFreeStruct(StructOfData);
-		if (slot == -1) {
-			puts("Список заполнен.");
-			return;
-		}
+		struct СPeople* contact = (СPeople*)calloc(1, sizeof(СPeople));
+		// Нужно выделять память динамически, чтобы значения хранились в куче (сохранялись после выхода из подпрограммы)
 
-		printf("Введите данные %d контакта \n", i + 1); 
+		printf("Введите данные %d контакта \n", i + 1);
 
 		printf("Введите имя: ");
-		while (getchar() != '\n');
-		gets_s(StructOfData[slot].name, MAXLEN);
+		gets_s(contact->name, MAXLEN);
 
 		printf("Введите фамилию: ");
-		gets_s(StructOfData[slot].surname, MAXLEN);
+		gets_s(contact->surname, MAXLEN);
 
 		printf("Введите номер телефона: ");
-		gets_s(StructOfData[slot].number, MAXLEN);
+		gets_s(contact->number, MAXLEN);
 
 		printf("Введите дату рождения в формате dd.MM.yyyy: ");
-		gets_s(StructOfData[slot].dateBirth, MAXLEN);
+		gets_s(contact->dateBirth, MAXLEN);
 
-		StructOfData[slot].isDeleted = false;
+		AddToBegin(contact);
 	}
 }
 
-int findFreeStruct(struct СPeople* StructOfData)
+void clearInputBuf()
 {
-	// Поиск свободной структуры
-	register int i;
-	for (i = 0; !StructOfData[i].isDeleted && i < MAXPEOPLE; i++);
-	if (i == MAXPEOPLE)
-		return -1; // Свободных структур нет
-	return i;
+	int garbageCollector;
+	while ((garbageCollector = getchar()) != '\n' && garbageCollector != EOF)
+	{
+	}
 }
 
 int menuEditing()
-{	
+{
 	system("cls");	// Очистка экрана 
 	puts("Меню");
 	puts("1 - Удаление отдельной строки");
@@ -184,7 +289,7 @@ int menuEditing()
 	int choice;
 	do
 	{
-		puts("Введите номер нужного пункта: ");
+		printf("Введите номер нужного пункта: ");
 		scanf_s("%i", &choice);
 		while (getchar() != '\n');
 	} while ((choice < 1) || (choice > 4));
@@ -192,91 +297,233 @@ int menuEditing()
 	return choice;
 }
 
-int inputItemNumber(struct СPeople* StructOfData, const char* title)
+void deleteStruct()
 {
-	if (isEmptyList(StructOfData))
+	СPeople* curPointer = contacts.root;
+
+	if (curPointer == nullptr)
 	{
 		puts("Список пуст. ");
 		getchar();
-		return -1;
+		return;
 	}
 
-	outputList(StructOfData, title);
+	puts("Выберите контакт для удаления ");
+	char name[MAXLEN], surname[MAXLEN];
+	printf("Введите имя: ");
+	gets_s(name, MAXLEN);
+	printf("Введите фамилию: ");
+	gets_s(surname, MAXLEN);
 
-	int number;
-	do
+	if (Equals(*contacts.root, name, surname))
 	{
-		int mistakeProofing;
-		puts("Введите номер записи контакта: ");
-		do
+		contacts.root = contacts.root->next;
+		return;
+	}
+
+	while (curPointer->next != nullptr)
+	{
+		if (Equals(*curPointer->next, name, surname))
 		{
-			mistakeProofing = scanf_s("%i", &number);
-		} while (number < 0 || mistakeProofing < 1);
+			curPointer->next = curPointer->next->next;
+			return;
+		}
+		curPointer = curPointer->next;
+	}
 
-		if (StructOfData[number - 1].isDeleted)
-			printf("Товар с номером %i не существует \n", number);
-
-	} while (number - 1 < 0 || number - 1 >= MAXPEOPLE || StructOfData[number - 1].isDeleted);
-
-	return number - 1;
+	puts("Данного контакта нет.");
+	getchar();
 }
 
-int isEmptyList(struct СPeople* StructOfData)
+bool Equals(СPeople contact, char* name, char* surname)
 {
-	for (int i = 0; i < MAXPEOPLE; i++)
-		if (StructOfData[i].isDeleted == 0)
-			return 0;
-	return 1;
+	if (strcmp(contact.name, name) == 0 && strcmp(contact.surname, surname) == 0)
+		return true;
+	return false;
 }
 
-void deleteStruct(struct СPeople* StructOfData, const char* title)
+void editing()
 {
-	int number = inputItemNumber(StructOfData, title);
-	if (number == -1)
-		return;
-	StructOfData[number].isDeleted = 1;
-}
+	СPeople* curPointer = contacts.root;
 
-void editing(struct СPeople* StructOfData, const char* title)
-{
-	if (isEmptyList(StructOfData))
+	if (curPointer == nullptr)
 	{
 		puts("Список пуст. ");
 		getchar();
 		return;
 	}
 
-	int number = inputItemNumber(StructOfData, title);
-	if (number == -1)
+	puts("Выберите контакт для редактирования ");
+	char name[MAXLEN], surname[MAXLEN];
+	printf("Введите имя: ");
+	gets_s(name, MAXLEN);
+	printf("Введите фамилию: ");
+	gets_s(surname, MAXLEN);
+
+	bool isFound = false;
+	if (Equals(*curPointer, name, surname))
+	{
+		outputStruct(curPointer);
+		isFound = true;
+	}
+
+	while (curPointer->next != nullptr && !isFound)
+	{
+		if (Equals(*curPointer, name, surname))
+		{
+			outputStruct(curPointer);
+			isFound = true;
+		}
+		curPointer = curPointer->next;
+	}
+
+	if (!isFound)
+	{
+		puts("Данного контакта нет.");
+		getchar();
 		return;
-	
+	}
+
 	puts("Выберите поле для редактирования ");
 	int choice = menuFields();
 
 	switch (choice)
 	{
 	case 1:
-		puts("Введите имя: ");
-		gets_s(StructOfData[number].name, MAXLEN);
+		printf("Введите имя: ");
+		gets_s(curPointer->name, MAXLEN);
 		break;
 	case 2:
-		puts("Введите фамилию: ");
-		gets_s(StructOfData[number].surname, MAXLEN);
+		printf("Введите фамилию: ");
+		gets_s(curPointer->surname, MAXLEN);
 		break;
 	case 3:
-		puts("Введите номер телефона: ");
-		gets_s(StructOfData[number].number, MAXLEN);
+		printf("Введите номер телефона: ");
+		gets_s(curPointer->number, MAXLEN);
 		break;
 	case 4:
-		puts("Введите дату рождения в формате dd.MM.yyyy: ");
-		gets_s(StructOfData[number].dateBirth, MAXLEN);
+		printf("Введите дату рождения в формате dd.MM.yyyy: ");
+		gets_s(curPointer->dateBirth, MAXLEN);
+		break;
+	}
+
+	outputStruct(curPointer);
+	getchar();
+}
+
+void sorting()
+{
+	СPeople* curPointer = contacts.root;
+
+	if (curPointer == nullptr)
+	{
+		puts("Список пуст. ");
+		getchar();
+		return;
+	}
+	outputList();
+
+	puts("Выберите поле для сортировки ");
+	int choice = menuFields();
+
+	int amount = Count();
+	struct СPeople* contactsArray = (СPeople*)calloc(amount, sizeof(СPeople));
+
+	for (int i = 0; i < amount; i++)
+	{
+		contactsArray[i] = *curPointer;
+		curPointer = curPointer->next;
+	}
+	freeList();
+
+	struct СPeople* auxiliaryContactsArray = (СPeople*)calloc(amount, sizeof(СPeople));
+	merge_sort(0, amount - 1, contactsArray, auxiliaryContactsArray, choice);
+	free(auxiliaryContactsArray);
+
+	for (int i = amount - 1; i >= 0; i--)
+		AddToBegin(&contactsArray[i]);
+
+	outputList();
+}
+
+void freeList()
+{
+	contacts.root->next = nullptr;
+	free(contacts.root);
+	contacts.root = nullptr;
+}
+
+void merge_sort(int i, int j, struct СPeople* a, struct СPeople* aux, int choice) {
+	if (j <= i) {
+		return;     // the subsection is empty or a single element
+	}
+	int mid = (i + j) / 2;
+
+	// left sub-array is a[i .. mid]
+	// right sub-array is a[mid + 1 .. j]
+
+	merge_sort(i, mid, a, aux, choice);     // sort the left sub-array recursively
+	merge_sort(mid + 1, j, a, aux, choice);     // sort the right sub-array recursively
+
+	int pointer_left = i;       // pointer_left points to the beginning of the left sub-array
+	int pointer_right = mid + 1;        // pointer_right points to the beginning of the right sub-array
+
+	// we loop from i to j to fill each element of the final merged array
+	for (int k = i; k <= j; k++) {
+		if (pointer_left == mid + 1) {      // left pointer has reached the limit
+			aux[k] = a[pointer_right];
+			pointer_right++;
+		}
+		else if (pointer_right == j + 1) {        // right pointer has reached the limit
+			aux[k] = a[pointer_left];
+			pointer_left++;
+		}
+		else if (lessStructures(a[pointer_left], a[pointer_right], choice)) {        // pointer left points to smaller element
+			aux[k] = a[pointer_left];
+			pointer_left++;
+		}
+		else {        // pointer right points to smaller element
+			aux[k] = a[pointer_right];
+			pointer_right++;
+		}
+	}
+
+	for (int k = i; k <= j; k++) {      // copy the elements from aux[] to a[]
+		a[k] = aux[k];
+	}
+}
+
+bool lessStructures(СPeople first, СPeople second, int choice)
+{
+	switch (choice)
+	{
+	case 1:
+		return less(first.name, second.name);
+		break;
+	case 2:
+		return less(first.surname, second.surname);
+		break;
+	case 3:
+		return less(first.number, second.number);
+		break;
+	case 4:
+		return less(first.dateBirth, second.dateBirth);
 		break;
 	}
 }
 
-void sorting(struct СPeople* StructOfData)
+bool less(char* first, char* second)
 {
-	;
+	if (strcmp(first, second) < 0)
+		return true;
+	return false;
+}
+
+bool more(char* first, char* second)
+{
+	if (strcmp(first, second) > 0)
+		return true;
+	return false;
 }
 
 int menuFields()
@@ -290,17 +537,17 @@ int menuFields()
 	int choice;
 	do
 	{
-		puts("Введите номер нужного пункта: ");
+		printf("Введите номер нужного пункта: ");
 		scanf_s("%i", &choice);
 		while (getchar() != '\n');
 	} while ((choice < 1) || (choice > 4));
 
 	return choice;
-} 
+}
 
-void outputList(struct СPeople* StructOfData, const char* title)
+void outputList()
 {
-	if (isEmptyList(StructOfData))
+	if (contacts.root == nullptr)
 	{
 		puts("Список пуст. ");
 		getchar();
@@ -309,17 +556,78 @@ void outputList(struct СPeople* StructOfData, const char* title)
 
 	puts("Список контактов");
 	puts(title);
-	for (int i = 0; i < MAXPEOPLE; i++)
-		if (!StructOfData[i].isDeleted)
-		{
-			printf("%d ", i + 1);
-			printf("%-09s ", StructOfData[i].name);
-			printf("%-010s ", StructOfData[i].surname);
-			printf("%-011s ", StructOfData[i].number);
-			printf("%-012s \n", StructOfData[i].dateBirth);
-		}
+
+	СPeople* curPointer = contacts.root;
+	int i = 0;
+	do
+	{
+		if (i != 0)
+			curPointer = curPointer->next;
+		printf("%d ", i + 1);
+		printf("%-010s ", curPointer->name);
+		printf("%-020s ", curPointer->surname);
+		printf("%-025s ", curPointer->number);
+		printf("%-010s \n", curPointer->dateBirth);
+		i++;
+	} while (curPointer->next != nullptr);
+
 	puts("Для продолжения нажмите любую клавишу.");
 	getchar();
 }
 
+void outputStruct(struct СPeople* StructOfData)
+{
+	puts(title);
+	printf("%-09s ", StructOfData->name);
+	printf("%-010s ", StructOfData->surname);
+	printf("%-011s ", StructOfData->number);
+	printf("%-012s \n", StructOfData->dateBirth);
+}
 
+void outputInFile()
+{
+	char nameFile[50];
+	printf("Введите название файла: ");
+	scanf_s("%s", nameFile, sizeof(nameFile));
+
+	FILE* fileWrite;
+	errno_t err = fopen_s(&fileWrite, nameFile, "w+");
+	if (err == 0)
+		printf("Файл %s открылся\n", nameFile);
+	else
+	{
+		printf("Файл %s не открылся\n", nameFile);
+		clearInputBuf();
+		getchar();
+		return;
+	}
+
+	if (contacts.root == nullptr)
+	{
+		fprintf(fileWrite, "Список пуст. \n");
+		getchar();
+		return;
+	}
+
+	fprintf(fileWrite, "Список контактов \n");
+	fprintf(fileWrite, "%s \n", title);
+
+	СPeople* curPointer = contacts.root;
+	int i = 0;
+	do
+	{
+		if (i != 0)
+			curPointer = curPointer->next;
+		fprintf(fileWrite, "%d ", i + 1);
+		fprintf(fileWrite, "%-010s ", curPointer->name);
+		fprintf(fileWrite, "%-020s ", curPointer->surname);
+		fprintf(fileWrite, "%-025s ", curPointer->number);
+		fprintf(fileWrite, "%-010s \n", curPointer->dateBirth);
+		i++;
+	} while (curPointer->next != nullptr);
+
+	fclose(fileWrite);
+	printf("Список сохранен в файле %s \n", nameFile);
+	clearInputBuf();
+	getchar();
+}
